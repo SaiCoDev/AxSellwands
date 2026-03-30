@@ -27,6 +27,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +39,7 @@ import static com.artillexstudios.axsellwands.AxSellwands.LANG;
 import static com.artillexstudios.axsellwands.AxSellwands.MESSAGEUTILS;
 
 public class SellwandUseListener implements Listener {
+    private static final FloodgateBridge FLOODGATE = FloodgateBridge.create();
 
     @EventHandler(ignoreCancelled = true)
     public void onInteract(@NotNull PlayerInteractEvent event) {
@@ -75,8 +78,10 @@ public class SellwandUseListener implements Listener {
             return;
         }
 
+        boolean shouldSell = event.getAction() == Action.RIGHT_CLICK_BLOCK || (event.getAction() == Action.LEFT_CLICK_BLOCK && isBedrockPlayer(player));
+
         Long lastUsed = wrapper.getLong("axsellwands-lastused");
-        if (lastUsed != null && System.currentTimeMillis() - lastUsed < sellwand.getCooldown() && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (lastUsed != null && System.currentTimeMillis() - lastUsed < sellwand.getCooldown() && shouldSell) {
             MESSAGEUTILS.sendLang(player, "cooldown", Collections.singletonMap("%time%", Long.toString(Math.round((sellwand.getCooldown() - System.currentTimeMillis() + lastUsed) / 1000D))));
             return;
         }
@@ -91,7 +96,7 @@ public class SellwandUseListener implements Listener {
         int newSoldAmount = 0;
         double newSoldPrice = 0;
 
-        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (shouldSell) {
             Map<Material, Integer> items = new HashMap<>();
             for (ItemStack it : contents) {
                 if (it == null) continue;
@@ -234,4 +239,39 @@ public class SellwandUseListener implements Listener {
             }
         }
     }
+
+    private boolean isBedrockPlayer(@NotNull Player player) {
+        if (!Bukkit.getPluginManager().isPluginEnabled("floodgate")) return false;
+        return FLOODGATE.isFloodgatePlayer(player.getUniqueId());
+    }
+
+    private record FloodgateBridge(Object api, Method isFloodgatePlayerMethod) {
+        private static FloodgateBridge create() {
+            try {
+                Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+                Method getInstance = apiClass.getMethod("getInstance");
+                Object api = getInstance.invoke(null);
+                Method isFloodgatePlayerMethod = apiClass.getMethod("isFloodgatePlayer", UUID.class);
+                return new FloodgateBridge(api, isFloodgatePlayerMethod);
+            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+                return new FloodgateBridge(null, null);
+            } catch (LinkageError ignored) {
+                return new FloodgateBridge(null, null);
+            }
+        }
+
+        private boolean isFloodgatePlayer(@NotNull UUID uuid) {
+            if (api == null || isFloodgatePlayerMethod == null) return false;
+
+            try {
+                Object result = isFloodgatePlayerMethod.invoke(api, uuid);
+                return result instanceof Boolean && (Boolean) result;
+            } catch (IllegalAccessException | InvocationTargetException ignored) {
+                return false;
+            } catch (LinkageError ignored) {
+                return false;
+            }
+        }
+    }
+
 }
