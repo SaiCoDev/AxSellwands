@@ -22,6 +22,202 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Prepare CI stub dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p libs target/ci-stubs/src
+
+          create_stub_jar() {
+            local jar_path="$1"
+            shift
+            local stub_dir="target/ci-stubs/src/$(basename "${jar_path%.jar}")"
+            local classes_dir="target/ci-stubs/classes/$(basename "${jar_path%.jar}")"
+            rm -rf "$stub_dir" "$classes_dir"
+            mkdir -p "$stub_dir" "$classes_dir"
+            while [ "$#" -gt 0 ]; do
+              local rel="$1"; shift
+              mkdir -p "$stub_dir/$(dirname "$rel")"
+              cat > "$stub_dir/$rel"
+            done
+            if find "$stub_dir" -name '*.java' -print -quit | grep -q .; then
+              javac -d "$classes_dir" $(find "$stub_dir" -name '*.java')
+              jar --create --file "$jar_path" -C "$classes_dir" .
+            else
+              jar --create --file "$jar_path" -C "$classes_dir" .
+            fi
+          }
+
+          create_stub_jar libs/CMI-API9.5.0.8.jar \
+            com/Zrips/CMI/CMI.java <<'EOF'
+          package com.Zrips.CMI;
+          public class CMI {
+              private static final CMI INSTANCE = new CMI();
+              private final WorthManager worthManager = new WorthManager();
+              public static CMI getInstance() { return INSTANCE; }
+              public WorthManager getWorthManager() { return worthManager; }
+              public static class WorthManager {
+                  public com.Zrips.CMI.Modules.Worth.WorthItem getWorth(Object item) { return null; }
+              }
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/CMI-API9.5.0.8/com/Zrips/CMI/Modules/Worth
+          cat > target/ci-stubs/src/CMI-API9.5.0.8/com/Zrips/CMI/Modules/Worth/WorthItem.java <<'EOF'
+          package com.Zrips.CMI.Modules.Worth;
+          public class WorthItem {
+              public double getSellPrice() { return 0D; }
+          }
+          EOF
+          javac -d target/ci-stubs/classes/CMI-API9.5.0.8 $(find target/ci-stubs/src/CMI-API9.5.0.8 -name '*.java')
+          jar --create --file libs/CMI-API9.5.0.8.jar -C target/ci-stubs/classes/CMI-API9.5.0.8 .
+
+          create_stub_jar libs/CMILib1.4.1.2.jar
+
+          create_stub_jar libs/CoinsEngine-2.2.0.jar \
+            su/nightexpress/coinsengine/api/CoinsEngineAPI.java <<'EOF'
+          package su.nightexpress.coinsengine.api;
+          import su.nightexpress.coinsengine.api.currency.Currency;
+          public class CoinsEngineAPI {
+              public static Currency getCurrency(String name) { return null; }
+              public static double getBalance(Object player, Currency currency) { return 0D; }
+              public static void addBalance(Object player, Currency currency, double amount) {}
+              public static void removeBalance(Object player, Currency currency, double amount) {}
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/CoinsEngine-2.2.0/su/nightexpress/coinsengine/api/currency
+          cat > target/ci-stubs/src/CoinsEngine-2.2.0/su/nightexpress/coinsengine/api/currency/Currency.java <<'EOF'
+          package su.nightexpress.coinsengine.api.currency;
+          public class Currency {}
+          EOF
+          javac -d target/ci-stubs/classes/CoinsEngine-2.2.0 $(find target/ci-stubs/src/CoinsEngine-2.2.0 -name '*.java')
+          jar --create --file libs/CoinsEngine-2.2.0.jar -C target/ci-stubs/classes/CoinsEngine-2.2.0 .
+
+          create_stub_jar libs/ExcellentEconomy-2.7.0.jar \
+            su/nightexpress/excellenteconomy/api/ExcellentEconomyAPI.java <<'EOF'
+          package su.nightexpress.excellenteconomy.api;
+          import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
+          public interface ExcellentEconomyAPI {
+              ExcellentCurrency getCurrency(String name);
+              double getBalance(Object player, ExcellentCurrency currency);
+              void deposit(Object player, ExcellentCurrency currency, double amount);
+              void withdraw(Object player, ExcellentCurrency currency, double amount);
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/ExcellentEconomy-2.7.0/su/nightexpress/excellenteconomy/api/currency
+          cat > target/ci-stubs/src/ExcellentEconomy-2.7.0/su/nightexpress/excellenteconomy/api/currency/ExcellentCurrency.java <<'EOF'
+          package su.nightexpress.excellenteconomy.api.currency;
+          public class ExcellentCurrency {}
+          EOF
+          javac -d target/ci-stubs/classes/ExcellentEconomy-2.7.0 $(find target/ci-stubs/src/ExcellentEconomy-2.7.0 -name '*.java')
+          jar --create --file libs/ExcellentEconomy-2.7.0.jar -C target/ci-stubs/classes/ExcellentEconomy-2.7.0 .
+
+          create_stub_jar libs/RoyaleEconomyAPI.jar \
+            me/qKing12/RoyaleEconomy/RoyaleEconomy.java <<'EOF'
+          package me.qKing12.RoyaleEconomy;
+          public class RoyaleEconomy {
+              public static final APIHandler apiHandler = new APIHandler();
+              public static class APIHandler { public final Balance balance = new Balance(); }
+              public static class Balance {
+                  public double getBalance(String id) { return 0D; }
+                  public void addBalance(String id, double amount) {}
+                  public void removeBalance(String id, double amount) {}
+              }
+          }
+          EOF
+
+          create_stub_jar libs/Residence5.1.4.0.jar \
+            com/bekvon/bukkit/residence/Residence.java <<'EOF'
+          package com.bekvon.bukkit.residence;
+          public class Residence {
+              private static final Residence INSTANCE = new Residence();
+              private final PlayerManager playerManager = new PlayerManager();
+              public static Residence getInstance() { return INSTANCE; }
+              public PlayerManager getPlayerManager() { return playerManager; }
+              public static class PlayerManager {
+                  public com.bekvon.bukkit.residence.containers.ResidencePlayer getResidencePlayer(Object player) { return null; }
+              }
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/Residence5.1.4.0/com/bekvon/bukkit/residence/containers
+          cat > target/ci-stubs/src/Residence5.1.4.0/com/bekvon/bukkit/residence/containers/ResidencePlayer.java <<'EOF'
+          package com.bekvon.bukkit.residence.containers;
+          public class ResidencePlayer {
+              public boolean canBreakBlock(Object block, boolean move) { return true; }
+          }
+          EOF
+          javac -d target/ci-stubs/classes/Residence5.1.4.0 $(find target/ci-stubs/src/Residence5.1.4.0 -name '*.java')
+          jar --create --file libs/Residence5.1.4.0.jar -C target/ci-stubs/classes/Residence5.1.4.0 .
+
+          create_stub_jar libs/KingdomsX-1.16.14.1.jar \
+            org/kingdoms/constants/player/KingdomPlayer.java <<'EOF'
+          package org.kingdoms.constants.player;
+          import java.util.UUID;
+          public class KingdomPlayer {
+              public static KingdomPlayer getKingdomPlayer(UUID uuid) { return null; }
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/KingdomsX-1.16.14.1/org/kingdoms/constants/land
+          cat > target/ci-stubs/src/KingdomsX-1.16.14.1/org/kingdoms/constants/land/Land.java <<'EOF'
+          package org.kingdoms.constants.land;
+          public class Land {
+              public static Land getLand(Object location) { return null; }
+              public Kingdom getKingdom() { return new Kingdom(); }
+              public static class Kingdom {
+                  public boolean isMember(Object player) { return true; }
+              }
+          }
+          EOF
+          javac -d target/ci-stubs/classes/KingdomsX-1.16.14.1 $(find target/ci-stubs/src/KingdomsX-1.16.14.1 -name '*.java')
+          jar --create --file libs/KingdomsX-1.16.14.1.jar -C target/ci-stubs/classes/KingdomsX-1.16.14.1 .
+
+          create_stub_jar libs/IridiumSkyblock-4.1.0.jar \
+            com/iridium/iridiumskyblock/api/IridiumSkyblockAPI.java <<'EOF'
+          package com.iridium.iridiumskyblock.api;
+          import com.iridium.iridiumskyblock.database.Island;
+          import com.iridium.iridiumskyblock.dependencies.iridiumteams.PermissionType;
+          import java.util.Optional;
+          public class IridiumSkyblockAPI {
+              private static final IridiumSkyblockAPI INSTANCE = new IridiumSkyblockAPI();
+              public static IridiumSkyblockAPI getInstance() { return INSTANCE; }
+              public Optional<Island> getIslandViaLocation(Object location) { return Optional.empty(); }
+              public boolean getIslandPermission(Island island, Object user, PermissionType permissionType) { return true; }
+              public Object getUser(Object player) { return null; }
+          }
+          EOF
+          mkdir -p target/ci-stubs/src/IridiumSkyblock-4.1.0/com/iridium/iridiumskyblock/database
+          cat > target/ci-stubs/src/IridiumSkyblock-4.1.0/com/iridium/iridiumskyblock/database/Island.java <<'EOF'
+          package com.iridium.iridiumskyblock.database;
+          public class Island {}
+          EOF
+          mkdir -p target/ci-stubs/src/IridiumSkyblock-4.1.0/com/iridium/iridiumskyblock/dependencies/iridiumteams
+          cat > target/ci-stubs/src/IridiumSkyblock-4.1.0/com/iridium/iridiumskyblock/dependencies/iridiumteams/PermissionType.java <<'EOF'
+          package com.iridium.iridiumskyblock.dependencies.iridiumteams;
+          public enum PermissionType { BLOCK_PLACE }
+          EOF
+          javac -d target/ci-stubs/classes/IridiumSkyblock-4.1.0 $(find target/ci-stubs/src/IridiumSkyblock-4.1.0 -name '*.java')
+          jar --create --file libs/IridiumSkyblock-4.1.0.jar -C target/ci-stubs/classes/IridiumSkyblock-4.1.0 .
+
+          create_stub_jar libs/DynamicShop-3.16.1.jar \
+            me/sat7/dynamicshop/DynaShopAPI.java <<'EOF'
+          package me.sat7.dynamicshop;
+          import java.util.Collection;
+          import java.util.Collections;
+          public class DynaShopAPI {
+              public static Collection<String> getShops() { return Collections.emptyList(); }
+              public static double getSellPrice(String shop, Object item) { return -1D; }
+          }
+          EOF
+
+          create_stub_jar libs/LockettePro-2.11.1.jar
+
+          create_stub_jar target/ci-stubs/nightcore-2.7.3.jar
+          mvn -B -ntp install:install-file \
+            -Dfile=target/ci-stubs/nightcore-2.7.3.jar \
+            -DgroupId=su.nightexpress.nightcore \
+            -DartifactId=nightcore \
+            -Dversion=2.7.3 \
+            -Dpackaging=jar
+
       - name: Build jar
         run: mvn -B -ntp clean package
 
