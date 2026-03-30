@@ -27,6 +27,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,8 +77,11 @@ public class SellwandUseListener implements Listener {
             return;
         }
 
+        boolean shouldSell = event.getAction() == Action.RIGHT_CLICK_BLOCK
+                || (event.getAction() == Action.LEFT_CLICK_BLOCK && isBedrockPlayer(player));
+
         Long lastUsed = wrapper.getLong("axsellwands-lastused");
-        if (lastUsed != null && System.currentTimeMillis() - lastUsed < sellwand.getCooldown() && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (lastUsed != null && System.currentTimeMillis() - lastUsed < sellwand.getCooldown() && shouldSell) {
             MESSAGEUTILS.sendLang(player, "cooldown", Collections.singletonMap("%time%", Long.toString(Math.round((sellwand.getCooldown() - System.currentTimeMillis() + lastUsed) / 1000D))));
             return;
         }
@@ -91,7 +96,7 @@ public class SellwandUseListener implements Listener {
         int newSoldAmount = 0;
         double newSoldPrice = 0;
 
-        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (shouldSell) {
             Map<Material, Integer> items = new HashMap<>();
             for (ItemStack it : contents) {
                 if (it == null) continue;
@@ -232,6 +237,21 @@ public class SellwandUseListener implements Listener {
             if (!LANG.getString("particles.inspect").isEmpty()) {
                 player.spawnParticle(Particle.valueOf(LANG.getString("particles.inspect")), block.getLocation().add(0.5, 0.5, 0.5), 30, 0.5, 0.5, 0.5);
             }
+        }
+    }
+
+    private boolean isBedrockPlayer(@NotNull Player player) {
+        try {
+            Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+            Method getInstanceMethod = apiClass.getMethod("getInstance");
+            Object api = getInstanceMethod.invoke(null);
+            if (api == null) return false;
+
+            Method isFloodgatePlayerMethod = apiClass.getMethod("isFloodgatePlayer", java.util.UUID.class);
+            Object result = isFloodgatePlayerMethod.invoke(api, player.getUniqueId());
+            return result instanceof Boolean && (Boolean) result;
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+            return false;
         }
     }
 }
