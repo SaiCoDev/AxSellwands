@@ -1,0 +1,76 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Create CMI stub jar
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STUB_SRC="$(mktemp -d)"
+          STUB_CLASSES="$(mktemp -d)"
+          mkdir -p libs
+
+          # Create all CMI-related sources before compiling so cross-references resolve
+          # in a single javac invocation.
+          mkdir -p "$STUB_SRC/com/Zrips/CMI/Modules/Worth"
+
+          cat > "$STUB_SRC/com/Zrips/CMI/CMI.java" <<'EOF'
+          package com.Zrips.CMI;
+
+          import com.Zrips.CMI.Modules.Worth.WorthItem;
+          public class CMI {
+              private static final CMI INSTANCE = new CMI();
+
+              public static CMI getInstance() {
+                  return INSTANCE;
+              }
+
+              public WorthManager getWorthManager() {
+                  return new WorthManager();
+              }
+
+              public static class WorthManager {
+                  public WorthItem getWorth(Object item) {
+                      return null;
+                  }
+              }
+          }
+          EOF
+
+          cat > "$STUB_SRC/com/Zrips/CMI/Modules/Worth/WorthItem.java" <<'EOF'
+          package com.Zrips.CMI.Modules.Worth;
+
+          public class WorthItem {
+              public Double getSellPrice() {
+                  return null;
+              }
+
+              public Double getWorth() {
+                  return null;
+              }
+          }
+          EOF
+
+          javac -d "$STUB_CLASSES" $(find "$STUB_SRC" -name '*.java')
+          jar cf "libs/CMI-API9.5.0.8.jar" -C "$STUB_CLASSES" .
+
+      - name: Build jar
+        run: mvn -B -DskipTests package
