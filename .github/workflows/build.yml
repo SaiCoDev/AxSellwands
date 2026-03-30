@@ -19,7 +19,7 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Create CMI stub jar
+      - name: Create dependency stubs
         shell: bash
         run: |
           set -euo pipefail
@@ -28,14 +28,17 @@ jobs:
           STUB_CLASSES="$(mktemp -d)"
           mkdir -p libs
 
-          # Create all CMI-related sources before compiling so cross-references resolve
-          # in a single javac invocation.
-          mkdir -p "$STUB_SRC/com/Zrips/CMI/Modules/Worth"
+          mkstub() {
+            local path="$1"
+            mkdir -p "$(dirname "$STUB_SRC/$path")"
+            cat > "$STUB_SRC/$path"
+          }
 
-          cat > "$STUB_SRC/com/Zrips/CMI/CMI.java" <<'EOF'
+          mkstub com/Zrips/CMI/CMI.java <<'EOF'
           package com.Zrips.CMI;
 
           import com.Zrips.CMI.Modules.Worth.WorthItem;
+
           public class CMI {
               private static final CMI INSTANCE = new CMI();
 
@@ -55,7 +58,7 @@ jobs:
           }
           EOF
 
-          cat > "$STUB_SRC/com/Zrips/CMI/Modules/Worth/WorthItem.java" <<'EOF'
+          mkstub com/Zrips/CMI/Modules/Worth/WorthItem.java <<'EOF'
           package com.Zrips.CMI.Modules.Worth;
 
           public class WorthItem {
@@ -69,8 +72,224 @@ jobs:
           }
           EOF
 
+          mkstub me/sat7/dynamicshop/DynaShopAPI.java <<'EOF'
+          package me.sat7.dynamicshop;
+
+          import java.util.Collections;
+          import java.util.List;
+
+          public class DynaShopAPI {
+              public static List<String> getShops() { return Collections.emptyList(); }
+              public static double getSellPrice(String shop, Object item) { return -1.0D; }
+          }
+          EOF
+
+          mkstub com/iridium/iridiumskyblock/api/IridiumSkyblockAPI.java <<'EOF'
+          package com.iridium.iridiumskyblock.api;
+
+          import com.iridium.iridiumskyblock.database.Island;
+          import com.iridium.iridiumskyblock.dependencies.iridiumteams.PermissionType;
+
+          import java.util.Optional;
+
+          public class IridiumSkyblockAPI {
+              private static final IridiumSkyblockAPI INSTANCE = new IridiumSkyblockAPI();
+              public static IridiumSkyblockAPI getInstance() { return INSTANCE; }
+              public Optional<Island> getIslandViaLocation(Object location) { return Optional.empty(); }
+              public Object getUser(Object player) { return null; }
+              public boolean getIslandPermission(Island island, Object user, PermissionType permission) { return true; }
+          }
+          EOF
+
+          mkstub com/iridium/iridiumskyblock/database/Island.java <<'EOF'
+          package com.iridium.iridiumskyblock.database;
+
+          public class Island {}
+          EOF
+
+          mkstub com/iridium/iridiumskyblock/dependencies/iridiumteams/PermissionType.java <<'EOF'
+          package com.iridium.iridiumskyblock.dependencies.iridiumteams;
+
+          public enum PermissionType {
+              BLOCK_PLACE
+          }
+          EOF
+
+          mkstub com/bekvon/bukkit/residence/Residence.java <<'EOF'
+          package com.bekvon.bukkit.residence;
+
+          import com.bekvon.bukkit.residence.containers.ResidencePlayer;
+
+          public class Residence {
+              private static final Residence INSTANCE = new Residence();
+
+              public static Residence getInstance() {
+                  return INSTANCE;
+              }
+
+              public PlayerManager getPlayerManager() {
+                  return new PlayerManager();
+              }
+
+              public static class PlayerManager {
+                  public ResidencePlayer getResidencePlayer(Object player) {
+                      return new ResidencePlayer();
+                  }
+              }
+          }
+          EOF
+
+          mkstub com/bekvon/bukkit/residence/containers/ResidencePlayer.java <<'EOF'
+          package com.bekvon.bukkit.residence.containers;
+
+          public class ResidencePlayer {
+              public boolean canBreakBlock(Object block, boolean ignoreFlag) {
+                  return true;
+              }
+          }
+          EOF
+
+          mkstub org/kingdoms/constants/land/Land.java <<'EOF'
+          package org.kingdoms.constants.land;
+
+          import org.kingdoms.constants.player.KingdomPlayer;
+
+          public class Land {
+              public static Land getLand(Object location) { return null; }
+              public Kingdom getKingdom() { return new Kingdom(); }
+
+              public static class Kingdom {
+                  public boolean isMember(KingdomPlayer player) { return true; }
+              }
+          }
+          EOF
+
+          mkstub org/kingdoms/constants/player/KingdomPlayer.java <<'EOF'
+          package org.kingdoms.constants.player;
+
+          import java.util.UUID;
+
+          public class KingdomPlayer {
+              public static KingdomPlayer getKingdomPlayer(UUID uuid) { return new KingdomPlayer(); }
+          }
+          EOF
+
+          mkstub me/qKing12/RoyaleEconomy/RoyaleEconomy.java <<'EOF'
+          package me.qKing12.RoyaleEconomy;
+
+          public class RoyaleEconomy {
+              public static final ApiHandler apiHandler = new ApiHandler();
+
+              public static class ApiHandler {
+                  public final Balance balance = new Balance();
+              }
+
+              public static class Balance {
+                  public double getBalance(String playerId) { return 0.0D; }
+                  public void addBalance(String playerId, double amount) {}
+                  public void removeBalance(String playerId, double amount) {}
+              }
+          }
+          EOF
+
+          mkstub su/nightexpress/coinsengine/api/CoinsEngineAPI.java <<'EOF'
+          package su.nightexpress.coinsengine.api;
+
+          import su.nightexpress.coinsengine.api.currency.Currency;
+
+          public class CoinsEngineAPI {
+              public static Currency getCurrency(String name) { return null; }
+              public static double getBalance(Object player, Currency currency) { return 0.0D; }
+              public static void addBalance(Object player, Currency currency, double amount) {}
+              public static void removeBalance(Object player, Currency currency, double amount) {}
+          }
+          EOF
+
+          mkstub su/nightexpress/coinsengine/api/currency/Currency.java <<'EOF'
+          package su.nightexpress.coinsengine.api.currency;
+
+          public class Currency {}
+          EOF
+
+          mkstub su/nightexpress/excellenteconomy/api/ExcellentEconomyAPI.java <<'EOF'
+          package su.nightexpress.excellenteconomy.api;
+
+          import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
+
+          public class ExcellentEconomyAPI {
+              public ExcellentCurrency getCurrency(String name) { return null; }
+              public double getBalance(Object player, ExcellentCurrency currency) { return 0.0D; }
+              public void deposit(Object player, ExcellentCurrency currency, double amount) {}
+              public void withdraw(Object player, ExcellentCurrency currency, double amount) {}
+          }
+          EOF
+
+          mkstub su/nightexpress/excellenteconomy/api/currency/ExcellentCurrency.java <<'EOF'
+          package su.nightexpress.excellenteconomy.api.currency;
+
+          public class ExcellentCurrency {}
+          EOF
+
+          mkstub su/nightexpress/nexshop/ShopAPI.java <<'EOF'
+          package su.nightexpress.nexshop;
+
+          import su.nightexpress.nexshop.shop.virtual.impl.VirtualProduct;
+          import su.nightexpress.nexshop.api.shop.type.TradeType;
+
+          public class ShopAPI {
+              private static final VirtualShop SHOP = new VirtualShop();
+              public static VirtualShop getVirtualShop() { return SHOP; }
+
+              public static class VirtualShop {
+                  public VirtualProduct getBestProductFor(Object item, TradeType type) { return null; }
+              }
+          }
+          EOF
+
+          mkstub su/nightexpress/nexshop/api/shop/type/TradeType.java <<'EOF'
+          package su.nightexpress.nexshop.api.shop.type;
+
+          public enum TradeType {
+              SELL
+          }
+          EOF
+
+          mkstub su/nightexpress/nexshop/shop/virtual/impl/VirtualProduct.java <<'EOF'
+          package su.nightexpress.nexshop.shop.virtual.impl;
+
+          import su.nightexpress.nexshop.api.shop.type.TradeType;
+
+          public class VirtualProduct {
+              public boolean isSellable() { return false; }
+              public double getPrice(TradeType type) { return 0.0D; }
+              public int getUnitAmount() { return 1; }
+              public double getFinalSellPrice(Object player) { return 0.0D; }
+          }
+          EOF
+
           javac -d "$STUB_CLASSES" $(find "$STUB_SRC" -name '*.java')
-          jar cf "libs/CMI-API9.5.0.8.jar" -C "$STUB_CLASSES" .
+          jar cf libs/dependency-stubs.jar -C "$STUB_CLASSES" .
+
+          for jar_name in \
+            CMI-API9.5.0.8.jar \
+            CMILib1.4.1.2.jar \
+            CoinsEngine-2.2.0.jar \
+            ExcellentEconomy-2.7.0.jar \
+            RoyaleEconomyAPI.jar \
+            Residence5.1.4.0.jar \
+            KingdomsX-1.16.14.1.jar \
+            IridiumSkyblock-4.1.0.jar \
+            DynamicShop-3.16.1.jar \
+            LockettePro-2.11.1.jar; do
+            cp libs/dependency-stubs.jar "libs/$jar_name"
+          done
+
+          mvn -B install:install-file \
+            -Dfile=libs/dependency-stubs.jar \
+            -DgroupId=su.nightexpress.nightcore \
+            -DartifactId=nightcore \
+            -Dversion=2.7.3 \
+            -Dpackaging=jar
 
       - name: Build jar
         run: mvn -B -DskipTests package
