@@ -11,29 +11,46 @@ public class VaultHook implements CurrencyHook {
 
     @Override
     public void setup() {
-        final RegisteredServiceProvider<Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp == null) return;
-
-        econ = rsp.getProvider();
+        econ = resolveEconomy();
     }
 
     @Override
     public double getBalance(@NotNull Player p) {
-        return econ.getBalance(p);
+        final Economy economy = resolveEconomy();
+        if (economy == null) return 0;
+        return economy.getBalance(p);
     }
 
     @Override
     public void giveBalance(@NotNull Player p, double amount) {
-        econ.depositPlayer(p, amount);
+        final Economy economy = resolveEconomy();
+        if (economy == null) return;
+        economy.depositPlayer(p, amount);
     }
 
     @Override
     public void takeBalance(@NotNull Player p, double amount) {
-        econ.withdrawPlayer(p, amount);
+        final Economy economy = resolveEconomy();
+        if (economy == null) return;
+        economy.withdrawPlayer(p, amount);
     }
 
     @Override
     public boolean isAvailable() {
-        return econ != null;
+        return resolveEconomy() != null;
+    }
+
+    private Economy resolveEconomy() {
+        if (econ != null) {
+            return econ;
+        }
+
+        final RegisteredServiceProvider<Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return null;
+        }
+
+        econ = rsp.getProvider();
+        return econ;
     }
 }
