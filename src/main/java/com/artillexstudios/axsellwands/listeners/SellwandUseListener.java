@@ -8,6 +8,7 @@ import com.artillexstudios.axapi.utils.Title;
 import com.artillexstudios.axsellwands.api.events.AxSellwandsSellEvent;
 import com.artillexstudios.axsellwands.hooks.HookManager;
 import com.artillexstudios.axsellwands.hooks.container.ContainerHook;
+import com.artillexstudios.axsellwands.hooks.currency.CurrencyHook;
 import com.artillexstudios.axsellwands.sellwands.Sellwand;
 import com.artillexstudios.axsellwands.sellwands.Sellwands;
 import com.artillexstudios.axsellwands.utils.HistoryUtils;
@@ -92,6 +93,12 @@ public class SellwandUseListener implements Listener {
         double newSoldPrice = 0;
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            CurrencyHook currencyHook = HookManager.getCurrency();
+            if (currencyHook == null || !currencyHook.isAvailable()) {
+                MESSAGEUTILS.sendLang(player, "sell.failed-no-economy");
+                return;
+            }
+
             Map<Material, Integer> items = new HashMap<>();
             for (ItemStack it : contents) {
                 if (it == null) continue;
@@ -134,7 +141,7 @@ public class SellwandUseListener implements Listener {
             replacements.put("%amount%", "" + newSoldAmount);
             replacements.put("%price%", NumberUtils.formatNumber(newSoldPrice));
 
-            HookManager.getCurrency().giveBalance(player, newSoldPrice);
+            currencyHook.giveBalance(player, newSoldPrice);
 
             if (CONFIG.getBoolean("hologram.enabled", true)) {
                 HologramUtils.spawnHologram(player, block.getLocation().add(0.5, 0.5, 0.5), replacements);
