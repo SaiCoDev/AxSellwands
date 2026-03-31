@@ -38,6 +38,7 @@ particles:
 
 # set to "" to disable
 sell:
+  failed-no-economy: "&#FF3333Selling failed because no economy provider is available. Please contact an administrator."
   chat: "&#FFAA55Sold &f%amount% &#FFAA55items for &f%price%$&#FFAA55!"
   actionbar: "&#FFAA55Sold &f%amount% &#FFAA55items for &f%price%$&#FFAA55!"
   title:

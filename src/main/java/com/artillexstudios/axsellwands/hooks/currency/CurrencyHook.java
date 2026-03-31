@@ -10,4 +10,8 @@ public interface CurrencyHook {
     void giveBalance(Player p, double amount);
 
     void takeBalance(Player p, double amount);
+
+    default boolean isAvailable() {
+        return true;
+    }
 }
