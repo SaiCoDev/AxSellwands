@@ -1,0 +1,33 @@
+name: Build plugin artifact
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build jar
+        run: mvn -B -DskipTests package
+
+      - name: Upload jar artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AxSellwands-jar
+          path: |
+            target/*.jar
+            !target/original-*.jar
+          if-no-files-found: error
