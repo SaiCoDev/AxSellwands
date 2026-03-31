@@ -1,0 +1,112 @@
+name: Build plugin artifact
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Create required local stub dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p libs
+
+          create_stub_jar() {
+            local output_jar="$1"
+            shift
+            local tmp_dir
+            tmp_dir="$(mktemp -d)"
+            mkdir -p "$tmp_dir/src"
+            while (($#)); do
+              local relative_path="$1"
+              local source_content="$2"
+              shift 2
+              mkdir -p "$tmp_dir/src/$(dirname "$relative_path")"
+              printf '%s\n' "$source_content" > "$tmp_dir/src/$relative_path"
+            done
+
+            if find "$tmp_dir/src" -name '*.java' -print -quit | grep -q .; then
+              javac -d "$tmp_dir/out" $(find "$tmp_dir/src" -name '*.java')
+            else
+              mkdir -p "$tmp_dir/out"
+            fi
+            jar cf "$output_jar" -C "$tmp_dir/out" .
+          }
+
+          create_stub_jar libs/CMI-API9.5.0.8.jar \
+            com/Zrips/CMI/CMI.java 'package com.Zrips.CMI; import com.Zrips.CMI.Modules.Worth.WorthItem; public class CMI { private static final CMI INSTANCE = new CMI(); public static CMI getInstance() { return INSTANCE; } public WorthManager getWorthManager() { return new WorthManager(); } public static class WorthManager { public WorthItem getWorth(Object stack) { return new WorthItem(); } } }' \
+            com/Zrips/CMI/Modules/Worth/WorthItem.java 'package com.Zrips.CMI.Modules.Worth; public class WorthItem { public double getSellPrice() { return 0.0D; } }'
+
+          create_stub_jar libs/CMILib1.4.1.2.jar
+
+          create_stub_jar libs/CoinsEngine-2.2.0.jar \
+            su/nightexpress/coinsengine/api/CoinsEngineAPI.java 'package su.nightexpress.coinsengine.api; import su.nightexpress.coinsengine.api.currency.Currency; public final class CoinsEngineAPI { private CoinsEngineAPI() {} public static Currency getCurrency(String name) { return new Currency(); } public static double getBalance(Object player, Currency currency) { return 0.0D; } public static void addBalance(Object player, Currency currency, double amount) {} public static void removeBalance(Object player, Currency currency, double amount) {} }' \
+            su/nightexpress/coinsengine/api/currency/Currency.java 'package su.nightexpress.coinsengine.api.currency; public class Currency {}'
+
+          create_stub_jar libs/ExcellentEconomy-2.7.0.jar \
+            su/nightexpress/excellenteconomy/api/ExcellentEconomyAPI.java 'package su.nightexpress.excellenteconomy.api; import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency; public interface ExcellentEconomyAPI { ExcellentCurrency getCurrency(String name); double getBalance(Object player, ExcellentCurrency currency); void deposit(Object player, ExcellentCurrency currency, double amount); void withdraw(Object player, ExcellentCurrency currency, double amount); }' \
+            su/nightexpress/excellenteconomy/api/currency/ExcellentCurrency.java 'package su.nightexpress.excellenteconomy.api.currency; public class ExcellentCurrency {}'
+
+          create_stub_jar libs/RoyaleEconomyAPI.jar \
+            me/qKing12/RoyaleEconomy/RoyaleEconomy.java 'package me.qKing12.RoyaleEconomy; public class RoyaleEconomy { public static final ApiHandler apiHandler = new ApiHandler(); public static class ApiHandler { public final Balance balance = new Balance(); } public static class Balance { public double getBalance(String id) { return 0.0D; } public void addBalance(String id, double amount) {} public void removeBalance(String id, double amount) {} } }'
+
+          create_stub_jar libs/Residence5.1.4.0.jar \
+            com/bekvon/bukkit/residence/Residence.java 'package com.bekvon.bukkit.residence; import com.bekvon.bukkit.residence.containers.ResidencePlayer; public class Residence { private static final Residence INSTANCE = new Residence(); public static Residence getInstance() { return INSTANCE; } public PlayerManager getPlayerManager() { return new PlayerManager(); } public static class PlayerManager { public ResidencePlayer getResidencePlayer(Object player) { return new ResidencePlayer(); } } }' \
+            com/bekvon/bukkit/residence/containers/ResidencePlayer.java 'package com.bekvon.bukkit.residence.containers; public class ResidencePlayer { public boolean canBreakBlock(Object block, boolean inform) { return true; } }'
+
+          create_stub_jar libs/KingdomsX-1.16.14.1.jar \
+            org/kingdoms/constants/player/KingdomPlayer.java 'package org.kingdoms.constants.player; import java.util.UUID; public class KingdomPlayer { public static KingdomPlayer getKingdomPlayer(UUID uuid) { return new KingdomPlayer(); } }' \
+            org/kingdoms/constants/land/Land.java 'package org.kingdoms.constants.land; import org.kingdoms.constants.player.KingdomPlayer; public class Land { public static Land getLand(Object location) { return null; } public Kingdom getKingdom() { return new Kingdom(); } public static class Kingdom { public boolean isMember(KingdomPlayer player) { return true; } } }'
+
+          create_stub_jar libs/IridiumSkyblock-4.1.0.jar \
+            com/iridium/iridiumskyblock/api/IridiumSkyblockAPI.java 'package com.iridium.iridiumskyblock.api; import com.iridium.iridiumskyblock.database.Island; import com.iridium.iridiumskyblock.dependencies.iridiumteams.PermissionType; import java.util.Optional; public class IridiumSkyblockAPI { private static final IridiumSkyblockAPI INSTANCE = new IridiumSkyblockAPI(); public static IridiumSkyblockAPI getInstance() { return INSTANCE; } public Optional<Island> getIslandViaLocation(Object location) { return Optional.empty(); } public Object getUser(Object player) { return new Object(); } public boolean getIslandPermission(Island island, Object user, PermissionType permission) { return true; } }' \
+            com/iridium/iridiumskyblock/database/Island.java 'package com.iridium.iridiumskyblock.database; public class Island {}' \
+            com/iridium/iridiumskyblock/dependencies/iridiumteams/PermissionType.java 'package com.iridium.iridiumskyblock.dependencies.iridiumteams; public enum PermissionType { BLOCK_PLACE }'
+
+          create_stub_jar libs/DynamicShop-3.16.1.jar \
+            me/sat7/dynamicshop/DynaShopAPI.java 'package me.sat7.dynamicshop; import java.util.Collections; import java.util.List; public class DynaShopAPI { public static List<String> getShops() { return Collections.emptyList(); } public static double getSellPrice(String shop, Object item) { return -1.0D; } }'
+
+          create_stub_jar libs/LockettePro-2.11.1.jar
+
+      - name: Install missing nightcore artifact shim
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_jar="$(mktemp --suffix=.jar)"
+          tmp_empty_dir="$(mktemp -d)"
+          mkdir -p "$tmp_empty_dir/placeholder"
+          printf 'shim\n' > "$tmp_empty_dir/placeholder/README.txt"
+          jar cf "$tmp_jar" -C "$tmp_empty_dir" .
+          mvn -B install:install-file \
+            -DgroupId=su.nightexpress.nightcore \
+            -DartifactId=nightcore \
+            -Dversion=2.7.3 \
+            -Dpackaging=jar \
+            -Dfile="$tmp_jar"
+
+      - name: Build jar
+        run: mvn -B -DskipTests package
+
+      - name: Upload jar artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AxSellwands-jar
+          path: |
+            target/*.jar
+            !target/original-*.jar
+          if-no-files-found: error
