@@ -87,7 +87,10 @@ jobs:
         run: |
           set -euo pipefail
           tmp_jar="$(mktemp --suffix=.jar)"
-          jar cf "$tmp_jar" -C /tmp .
+          tmp_empty_dir="$(mktemp -d)"
+          mkdir -p "$tmp_empty_dir/placeholder"
+          printf 'shim\n' > "$tmp_empty_dir/placeholder/README.txt"
+          jar cf "$tmp_jar" -C "$tmp_empty_dir" .
           mvn -B install:install-file \
             -DgroupId=su.nightexpress.nightcore \
             -DartifactId=nightcore \
