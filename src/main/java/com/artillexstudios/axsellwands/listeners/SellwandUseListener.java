@@ -106,12 +106,7 @@ public class SellwandUseListener implements Listener {
 
             newSoldPrice += price;
             newSoldAmount += it.getAmount();
-
-            if (items.containsKey(it.getType()))
-                items.put(it.getType(), items.get(it.getType()) + it.getAmount());
-            else
-                items.put(it.getType(), it.getAmount());
-
+            items.merge(it.getType(), it.getAmount(), Integer::sum);
             it.setAmount(0);
         }
 
@@ -133,7 +128,8 @@ public class SellwandUseListener implements Listener {
             str.append(e.getValue()).append("x ").append(e.getKey().name());
         }
         str.append("]");
-        HistoryUtils.writeToHistory(String.format("%s sold %dx items %s and earned %s (multiplier: %s, uses: %d)", player.getName(), newSoldAmount, str, newSoldPrice, multiplier, uses - 1));
+        int remainingUses = uses == -1 ? -1 : uses - 1;
+        HistoryUtils.writeToHistory(String.format("%s sold %dx items %s and earned %s (multiplier: %s, uses: %d)", player.getName(), newSoldAmount, str, newSoldPrice, multiplier, remainingUses));
 
         HashMap<String, String> replacements = new HashMap<>();
         replacements.put("%amount%", "" + newSoldAmount);
@@ -182,8 +178,7 @@ public class SellwandUseListener implements Listener {
         replacements.put("%sold-amount%", "" + (soldAmount + newSoldAmount));
         replacements.put("%sold-price%", NumberUtils.formatNumber(soldPrice + newSoldPrice));
 
-        Sellwand wand = Sellwands.getSellwands().get(type);
-        ItemBuilder builder = ItemBuilder.create(wand.getItemSection(), replacements);
+        ItemBuilder builder = ItemBuilder.create(sellwand.getItemSection(), replacements);
 
         event.getItem().setItemMeta(builder.get().getItemMeta());
 
